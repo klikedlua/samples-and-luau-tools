@@ -1,0 +1,146 @@
+pcall(function()
+    local en = (getgenv and getgenv()) or _G or _ENV
+    local tk = "Tamper Detected!"
+    if type(en) == "table" and type(rawset) == "function" then
+        rawset(en, tk, "KeyForge")
+    end
+end)
+
+local id = "KeyForge"
+
+local er = {
+    e1 = "this script must be run from a Roblox executor",
+    e2 = "HTTP requests are not supported by your executor",
+    e3 = "Failed to connect to KeyForge servers: ",
+    e4 = "Failed to load script: ",
+    e5 = "Invalid response from server (Status: ",
+    e6 = ")",
+}
+
+local function vf()
+    local ok = pcall(function()
+        assert(typeof(game) == "Instance", er.e1)
+        assert(typeof(workspace) == "Instance", er.e1)
+        assert(type(task) == "table", er.e1)
+        assert(Instance and Instance.new, er.e1)
+        game:GetService("Players")
+    end)
+    
+    if not ok then
+        error(er.e1, 2)
+    end
+end
+
+vf()
+
+local ge = (getgenv and getgenv()) or _G
+
+local function cg(nm)
+    local vl = ge[nm]
+    if vl == nil then
+        vl = _G[nm]
+    end
+    return vl ~= nil
+end
+
+local hr = (syn and syn.request) 
+    or (http and http.request) 
+    or (fluxus and fluxus.request) 
+    or request 
+    or http_request
+
+if type(hr) ~= "function" then
+    error(er.e2, 2)
+end
+
+local rg = {
+    "readfile", "writefile",
+    "hookfunction", "hookmetamethod",
+    "isfile", "isfolder",
+    "makefolder", "delfile",
+    "getgc", "getgenv",
+    "delfolder", "listfiles",
+    "Drawing",
+    "getnamecallmethod", "getcallingscript",
+    "getloadedmodules", "getsenv",
+}
+
+local gc = 2
+for _, gn in ipairs(rg) do
+    if cg(gn) then
+        gc = gc + 1
+    end
+end
+
+local ex = nil
+pcall(function()
+    if identifyexecutor then
+        local n1, n2 = identifyexecutor()
+        ex = n2 and (tostring(n1) .. " " .. tostring(n2)) or tostring(n1)
+    elseif getexecutorname then
+        ex = tostring(getexecutorname())
+    end
+end)
+
+local hw = nil
+pcall(function()
+    if gethwid then
+        hw = tostring(gethwid())
+    else
+        hw = tostring(game:GetService("RbxAnalyticsService"):GetClientId())
+    end
+end)
+
+local pi = nil
+pcall(function()
+    pi = game.PlaceId
+end)
+
+local hs = game:GetService("HttpService")
+
+local fp = hs:JSONEncode({
+    nonce = "NONCE_FROM_API",
+    fingerprint = {
+        executor = ex,
+        isRobloxEnv = true,
+        hasHttp = true,
+        hasFilesystem = cg("readfile") or cg("writefile") or cg("isfile"),
+        hasHooks = cg("hookfunction") or cg("hookmetamethod"),
+        hasDrawing = cg("Drawing"),
+        hasClosures = cg("getgc"),
+        globalCount = gc,
+        hwid = hw,
+        placeId = pi,
+    },
+})
+
+local au = "https://keyforge.app/api/v1/verify"
+
+local rs = hr({
+    Url = au,
+    Method = "POST",
+    Headers = {
+        ["Content-Type"] = "application/json"
+    },
+    Body = fp,
+})
+
+if type(rs) ~= "table" then
+    error(er.e3, 2)
+end
+
+local sc = rs.StatusCode or rs.status_code or 2
+local bd = rs.Body or rs.body or ""
+
+if sc ~= 200 then
+    local em = bd ~= "" and bd or (er.e5 .. tostring(sc) .. er.e6)
+    error(em, 2)
+end
+
+local fn, le = loadstring(bd)
+
+if not fn then
+    error(er.e4 .. tostring(le), 2)
+end
+
+return fn()
